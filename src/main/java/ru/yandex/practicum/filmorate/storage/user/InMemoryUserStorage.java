@@ -7,7 +7,6 @@ import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -93,27 +92,37 @@ public class InMemoryUserStorage implements UserStorage {
     }
 
     @Override
-    public Set<Long> getCommonFriends(Long userId, Long friendId) {
-        log.info("Запрос общих друзей пользователей {} и {}", userId, friendId);
+    public List<User> getCommonFriends(Long userId, Long friendId) {
         checkUserExist(new Long[] {userId, friendId});
 
         Set<Long> userFriends = users.get(userId).getFriendsIds();
         Set<Long> friendFriends = users.get(friendId).getFriendsIds();
 
-        Set<Long> commonFriends = userFriends.stream()
+        List<User> commonFriends = userFriends.stream()
                 .filter(friendFriends::contains)
-                .collect(Collectors.toSet());
+                .map(users::get)
+                .toList();
 
         if (commonFriends.isEmpty()) {
             throw new NotFoundException("У пользователей с ID: %s и %s нет общих друзей".formatted(userId, friendId));
-        } else return commonFriends;
+        } else {
+            log.info("Возвращаем список общих друзей пользователей {} и {}", userId, friendId);
+            return commonFriends;
+        }
     }
 
     @Override
-    public Set<Long> getAllFriends(Long userId) {
+    public List<User> getAllFriends(Long userId) {
         checkUserExist(new Long[] {userId});
+        Set<Long> friendsIds =  users.get(userId).getFriendsIds();
+
+        List<User> friends = friendsIds.stream()
+                .filter(users::containsKey)
+                .map(users::get)
+                .toList();
+
         log.info("Возвращен список друзей пользователя {}", userId);
-        return users.get(userId).getFriendsIds();
+        return friends;
     }
 
     private void checkUserExist(Long[] ids) {
