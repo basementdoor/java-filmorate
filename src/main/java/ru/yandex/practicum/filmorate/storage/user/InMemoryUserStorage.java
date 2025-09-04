@@ -6,9 +6,8 @@ import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -16,10 +15,12 @@ public class InMemoryUserStorage implements UserStorage {
 
     private Map<Long, User> users = new HashMap<>();
 
-    public Collection<User> getAll() {
+    @Override
+    public Collection<User> getAllUsers() {
         return users.values();
     }
 
+    @Override
     public User create(User user) {
 
         if (user.getName() == null) {
@@ -33,6 +34,7 @@ public class InMemoryUserStorage implements UserStorage {
         return user;
     }
 
+    @Override
     public User update(User newUser) {
 
         if (newUser.getId() == null) {
@@ -56,6 +58,71 @@ public class InMemoryUserStorage implements UserStorage {
             return oldUser;
         }
         throw new NotFoundException("Пользователь с id = " + newUser.getId() + " не найден");
+    }
+
+    @Override
+    public User getUserById(Long id) {
+        log.info("Получен запрос на пользователя с ID: {}", id);
+        if (users.containsKey(id)) {
+            return users.get(id);
+        } else throw new NotFoundException("Пользователь с id = " + id + " не найден");
+    }
+
+    @Override
+    public void addFriend(Long userId, Long friendId) {
+        checkUserExist(new Long[] {userId, friendId});
+
+        User user = users.get(userId);
+        User friend = users.get(friendId);
+
+        user.getFriendsIds().add(friendId);
+        friend.getFriendsIds().add(userId);
+        log.info("Пользователь {} добавил в друзья {}", userId, friendId);
+    }
+
+    @Override
+    public void removeFriend(Long userId, Long friendId) {
+        checkUserExist(new Long[] {userId, friendId});
+
+        User user = users.get(userId);
+        User friend = users.get(friendId);
+
+        user.getFriendsIds().remove(friendId);
+        friend.getFriendsIds().remove(userId);
+        log.info("Пользователь {} удалил из друзей {}", userId, friendId);
+    }
+
+    @Override
+    public Set<Long> getCommonFriends(Long userId, Long friendId) {
+        log.info("Запрос общих друзей пользователей {} и {}", userId, friendId);
+        checkUserExist(new Long[] {userId, friendId});
+
+        Set<Long> userFriends = users.get(userId).getFriendsIds();
+        Set<Long> friendFriends = users.get(friendId).getFriendsIds();
+
+        Set<Long> commonFriends = userFriends.stream()
+                .filter(friendFriends::contains)
+                .collect(Collectors.toSet());
+
+        if (commonFriends.isEmpty()) {
+            throw new NotFoundException("У пользователей с ID: %s и %s нет общих друзей".formatted(userId, friendId));
+        } else return commonFriends;
+    }
+
+    @Override
+    public Set<Long> getAllFriends(Long userId) {
+        checkUserExist(new Long[] {userId});
+        log.info("Возвращен список друзей пользователя {}", userId);
+        return users.get(userId).getFriendsIds();
+    }
+
+    private void checkUserExist(Long[] ids) {
+        Arrays.stream(ids)
+                .filter(id -> !users.containsKey(id))
+                .findFirst()
+                .ifPresent(id -> {
+                    throw new NotFoundException("Пользователь с id = " + id + " не найден");
+                });
     }
 
     private long getNextId() {
