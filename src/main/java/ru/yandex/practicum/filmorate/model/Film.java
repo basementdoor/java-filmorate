@@ -14,7 +14,7 @@ import java.util.Set;
 public class Film {
 
     private Long id;
-    Set<Long> likes = new HashSet<>();
+    private Set<Long> likes = new HashSet<>();
 
     @NotNull(message = "Название - обязательное поле")
     @NotBlank(message = "Название не может быть пустым")
