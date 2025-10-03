@@ -65,7 +65,7 @@ public class UserControllerTest {
         Set<ConstraintViolation<User>> errors = validator.validate(user);
         Assertions.assertFalse(errors.isEmpty(), "Ожидалась ошибка");
         ConstraintViolation<User> error = errors.iterator().next();
-        Assertions.assertEquals("Логин не может быть пустым", error.getMessage());
+        Assertions.assertEquals("Укажите логин", error.getMessage());
     }
 
     @Test
