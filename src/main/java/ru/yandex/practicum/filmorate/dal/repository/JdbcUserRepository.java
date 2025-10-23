@@ -53,7 +53,7 @@ public class JdbcUserRepository implements UserRepository {
 
     @Override
     public User update(User user) {
-        checkExist(user.getId());
+        throwIfUserNotExist(user.getId());
         if (user.getName() == null || user.getName().isBlank()) {
             user.setName(user.getLogin());
         }
@@ -90,8 +90,8 @@ public class JdbcUserRepository implements UserRepository {
 
     @Override
     public void addFriend(Long userId, Long friendId) {
-        User user = checkExist(userId);
-        User friend = checkExist(friendId);
+        User user = throwIfUserNotExist(userId);
+        User friend = throwIfUserNotExist(friendId);
 
         MapSqlParameterSource params = new MapSqlParameterSource();
         params.addValue("user_id", user.getId());
@@ -108,8 +108,8 @@ public class JdbcUserRepository implements UserRepository {
 
     @Override
     public void removeFriend(Long userId, Long friendId) {
-        User user = checkExist(userId);
-        User friend = checkExist(friendId);
+        User user = throwIfUserNotExist(userId);
+        User friend = throwIfUserNotExist(friendId);
 
         MapSqlParameterSource params = new MapSqlParameterSource();
         params.addValue("user_id", user.getId());
@@ -122,8 +122,8 @@ public class JdbcUserRepository implements UserRepository {
 
     @Override
     public List<User> getCommonFriends(Long userId, Long friendId) {
-        User user = checkExist(userId);
-        User friend = checkExist(friendId);
+        User user = throwIfUserNotExist(userId);
+        User friend = throwIfUserNotExist(friendId);
 
         MapSqlParameterSource params = new MapSqlParameterSource();
         params.addValue("user_id", user.getId());
@@ -140,7 +140,7 @@ public class JdbcUserRepository implements UserRepository {
 
     @Override
     public List<User> getAllFriends(Long userId) {
-        User user = checkExist(userId);
+        User user = throwIfUserNotExist(userId);
 
         MapSqlParameterSource params = new MapSqlParameterSource();
         params.addValue("user_id", user.getId());
@@ -153,7 +153,7 @@ public class JdbcUserRepository implements UserRepository {
         return jdbc.query(sql, params, userMapper);
     }
 
-    private User checkExist(Long id) {
+    private User throwIfUserNotExist(Long id) {
         return getUserById(id)
                 .orElseThrow(() -> new NotFoundException("Пользователь с ID: " + id + " не найден"));
     }
