@@ -8,13 +8,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import ru.yandex.practicum.filmorate.dal.mapper.FilmRowMapper;
-import ru.yandex.practicum.filmorate.dal.mapper.GenreRowMapper;
-import ru.yandex.practicum.filmorate.dal.mapper.RatingRowMapper;
-import ru.yandex.practicum.filmorate.dal.mapper.UserRowMapper;
 import ru.yandex.practicum.filmorate.dal.repository.JdbcFilmRepository;
-import ru.yandex.practicum.filmorate.dal.repository.JdbcGenreRepository;
-import ru.yandex.practicum.filmorate.dal.repository.JdbcRatingRepository;
-import ru.yandex.practicum.filmorate.dal.repository.JdbcUserRepository;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.Rating;
@@ -31,13 +25,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @AutoConfigureTestDatabase
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 @Import({JdbcFilmRepository.class,
-        FilmRowMapper.class,
-        GenreRowMapper.class,
-        RatingRowMapper.class,
-        JdbcUserRepository.class,
-        JdbcGenreRepository.class,
-        JdbcRatingRepository.class,
-        UserRowMapper.class})
+        FilmRowMapper.class})
 public class JdbcFilmRepositoryTest {
 
     private final JdbcFilmRepository filmRepository;

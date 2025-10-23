@@ -9,25 +9,17 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.dal.mapper.FilmRowMapper;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 
-import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
 @Slf4j
 public class JdbcFilmRepository implements FilmRepository {
-
-    private static final LocalDate MIN_RELEASE = LocalDate.of(1895, 12, 28);
     private final NamedParameterJdbcOperations jdbc;
     private final FilmRowMapper filmMapper;
-    private final UserRepository userRepository;
-    private final GenreRepository genreRepository;
-    private final RatingRepository ratingRepository;
 
     @Override
     public Collection<Film> getAll() {
@@ -41,11 +33,6 @@ public class JdbcFilmRepository implements FilmRepository {
 
     @Override
     public Film create(Film film) {
-        if (film.getReleaseDate().isBefore(MIN_RELEASE)) {
-            throw new ValidationException("Дата релиза должна быть не ранее 28 декабря 1895 года");
-        }
-        validateRating(film);
-
         GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
         MapSqlParameterSource params = new MapSqlParameterSource();
         params.addValue("name", film.getName());
@@ -70,11 +57,7 @@ public class JdbcFilmRepository implements FilmRepository {
 
     @Override
     public Film update(Film film) {
-        checkExist(film.getId());
-        if (film.getReleaseDate().isBefore(MIN_RELEASE)) {
-            throw new ValidationException("Дата релиза должна быть не ранее 28 декабря 1895 года");
-        }
-        validateRating(film);
+        throwIfFilmNotExist(film.getId());
 
         MapSqlParameterSource params = new MapSqlParameterSource();
         params.addValue("id", film.getId());
@@ -121,9 +104,7 @@ public class JdbcFilmRepository implements FilmRepository {
 
     @Override
     public void addLike(Long userId, Long filmId) {
-        userRepository.getUserById(userId)
-                .orElseThrow(() -> new NotFoundException("Пользователь с ID: " + userId + " не найден"));
-        checkExist(filmId);
+        throwIfFilmNotExist(filmId);
 
         MapSqlParameterSource params = new MapSqlParameterSource();
         params.addValue("film_id", filmId);
@@ -136,9 +117,7 @@ public class JdbcFilmRepository implements FilmRepository {
 
     @Override
     public void removeLike(Long userId, Long filmId) {
-        userRepository.getUserById(userId)
-                .orElseThrow(() -> new NotFoundException("Пользователь с ID: " + userId + " не найден"));
-        checkExist(filmId);
+        throwIfFilmNotExist(filmId);
 
         MapSqlParameterSource params = new MapSqlParameterSource();
         params.addValue("film_id", filmId);
@@ -166,7 +145,7 @@ public class JdbcFilmRepository implements FilmRepository {
         return jdbc.query(sql, params, filmMapper);
     }
 
-    private void checkExist(Long id) {
+    private void throwIfFilmNotExist(Long id) {
         getFilmById(id).orElseThrow(() -> new NotFoundException("Фильм с ID: " + id + " не найден"));
     }
 
@@ -176,18 +155,6 @@ public class JdbcFilmRepository implements FilmRepository {
         params.addValue("film_id", film.getId());
         jdbc.update("DELETE FROM film_genres WHERE film_id = :film_id", params);
 
-        List<Genre> dbGenres = genreRepository.getAll();
-        Set<Long> dbGenreIds = dbGenres.stream()
-                .map(Genre::getId)
-                .collect(Collectors.toSet());
-
-        boolean allGenresExist = film.getGenres().stream()
-                .map(Genre::getId)
-                .allMatch(dbGenreIds::contains);
-        if (!allGenresExist) {
-            throw new NotFoundException("Для фильма указаны несуществующие жанры");
-        }
-
         // добавляем жанры для фильма батчем в таблицу
         SqlParameterSource[] batch = film.getGenres().stream()
                 .map(genre -> new MapSqlParameterSource()
@@ -195,11 +162,6 @@ public class JdbcFilmRepository implements FilmRepository {
                         .addValue("genre_id", genre.getId()))
                 .toArray(SqlParameterSource[]::new);
         jdbc.batchUpdate("INSERT INTO film_genres (film_id, genre_id) VALUES (:film_id, :genre_id)", batch);
-    }
-
-    private void validateRating(Film film) {
-        ratingRepository.getById(film.getMpa().getId())
-                .orElseThrow(() -> new NotFoundException("Рейтинг с ID: " + film.getMpa().getId() + " не найден"));
     }
 
     private void loadFilmGenres(Film film) {
