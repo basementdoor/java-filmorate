@@ -52,7 +52,8 @@ mvn clean package
 
 ### Запуск
 
-```mvn spring-boot:run
+```
+mvn spring-boot:run
 ```
 или
 
